@@ -1,72 +1,57 @@
-You are building teaching materials for a 2.5h class on Active Divergence in neural audio
-synthesis. This is STEP 1 of 4: training a baseline DDSP model that subsequent notebooks
-will hack and modify.
+You are building teaching materials for a 2.5h class on Active Divergence in generative audio models. This is task 1 of 4: train a baseline DDSP (Differentiable Digital Signal Processing) model that will be reused as the foundation for subsequent notebooks on inference-time active divergence techniques.
 
-PROJECT STRUCTURE (you may ONLY touch `src/` and `notebooks/`):
-- src/         → Python modules (DDSP model code goes here)
-- papers/      → Reference PDFs (READ-ONLY). Relevant for this step:
-                 - Engel et al., "DDSP: Differentiable Digital Signal Processing" (ICLR 2020)
-- models/      → Save trained checkpoints HERE (write-only target)
-- samples/     → Audio samples for demos (write-only target, you may save curated subsets)
-- training/    → Training logs go HERE (write-only target)
-- notebooks/   → Place the notebook for this step here as `00_baseline_ddsp.ipynb`
+## Goal
+Create a minimal, conventional DDSP implementation (harmonic oscillator + filtered noise) with encoder/decoder, trained on a small subset of a single instrument from the URMP dataset. The model must generate audio from only two control signals: frame-wise loudness and pitch (f0).
 
-DATASET:
-- Location: /mnt/mariadata/datasets/URMP/Dataset
-- Documentation: /mnt/mariadata/datasets/URMP/README_for_Dataset.tar.pdf
-- Task: Read the documentation, then select a SMALL subset (~50-200 samples) of a SINGLE
-  instrument with clear pitched content (suggest violin, flute, or trumpet — pick whichever
-  has the cleanest harmonic structure in the subset).
+## Project structure (strict)
+- `src/` — all Python modules go here. You may create subpackages (e.g. `src/ddsp/`).
+- `papers/` — READ-ONLY. Contains reference PDFs including the original DDSP paper by Engel et al. Read it before implementing.
+- `models/` — write trained checkpoints here.
+- `samples/` — write a small curated audio subset here for notebook demos (CPU-friendly).
+- `training/` — write training logs (TensorBoard or plain text) here.
+- `notebooks/` — write the Jupyter notebook here as `01_ddsp_baseline.ipynb`.
+- DO NOT touch anything outside `src/` and `notebooks/` except for writing checkpoints to `models/`, samples to `samples/`, and logs to `training/`. Do not modify `papers/`.
 
-GOAL:
-Implement a minimal, conventional DDSP autoencoder following Engel et al. (2020) Section 4.1:
-- Encoder: extracts time-varying loudness (A-weighted, in dB) and pitch (f0, via CREPE or
-  similar) from input audio. These are the ONLY two control parameters — keep it minimal,
-  no learned z embedding for this baseline.
-- Decoder: an MLP+GRU+MLP stack mapping (loudness, f0) → synthesizer parameters:
-    * harmonic amplitudes (per-harmonic, normalized by a global amplitude)
-    * filtered-noise FIR filter magnitudes
-- Synthesizer: harmonic oscillator bank + filtered noise, summed. Must be fully
-  differentiable and implemented in PyTorch.
-- Loss: multi-scale spectral loss (L1 on magnitudes across multiple FFT sizes,
-  e.g., [2048, 1024, 512, 256, 128, 64]).
+## Dataset
+- Location: `/mnt/mariadata/datasets/URMP/Dataset`
+- Documentation: `/mnt/mariadata/datasets/URMP/README_for_Dataset.tar.pdf`
+- First, read the README PDF to understand the structure (multi-instrument recordings with separated stems, per-note F0 annotations, etc.).
+- Pick ONE instrument with sufficient solo-stem material (violin is a safe default if you have no strong reason otherwise). Document your choice and why.
+- Curate a SMALL subset (a few minutes total of audio is enough for didactic purposes). Copy the curated raw audio into `samples/` so notebooks have local access without touching the original dataset.
 
-RULES:
-1. Use Python + Jupyter only. The notebook should be interactive — use `ipywidgets` for
-   parameter controls (e.g., a slider to scrub through training samples and listen).
-2. Training MUST use GPU (assume CUDA available). Save model in CPU-loadable form so
-   downstream notebooks can run inference on CPU only.
-3. Use `torch`, `torchaudio`, `librosa`, `crepe` (or `torchcrepe`), `numpy`, `matplotlib`,
-   `ipywidgets`. Avoid heavy frameworks like the original `ddsp` TensorFlow library —
-   reimplement minimally in PyTorch.
-4. Code should be MINIMAL but FULLY FUNCTIONAL. Didactic clarity > cleverness.
-   Every non-obvious line should have a short comment.
-5. Put reusable code in `src/` as proper modules:
-     - `src/ddsp/synth.py`     (harmonic + filtered noise synths)
-     - `src/ddsp/model.py`     (encoder, decoder)
-     - `src/ddsp/loss.py`      (multi-scale spectral loss)
-     - `src/ddsp/features.py`  (loudness + pitch extraction)
-     - `src/ddsp/dataset.py`   (dataset class for the chosen subset)
-     - `src/ddsp/train.py`     (training loop)
-   The notebook imports from these and orchestrates.
+## Environment
+- Use a dedicated conda environment named `active-divergence`. This SAME environment will be reused across all 4 tasks, so install a superset of dependencies you anticipate needing (PyTorch with CUDA, torchaudio, librosa, CREPE or torchcrepe for f0, numpy, scipy, matplotlib, ipywidgets, jupyter, tensorboard, soundfile, tqdm). Pin nothing aggressively; just make it work.
+- If the env already exists, reuse it and add missing packages.
+- Provide an `environment.yml` or shell snippet inside the notebook's first cell showing how to recreate it.
+- Training uses GPU. Inference in notebooks must work on CPU — load checkpoints with `map_location='cpu'` in notebook code paths.
 
-NOTEBOOK STRUCTURE (`notebooks/00_baseline_ddsp.ipynb`):
-1. Brief markdown intro: what DDSP is, why we're building it (foreshadow active divergence).
-2. Load + inspect the chosen instrument subset. Plot a sample's waveform, spectrogram,
-   loudness curve, and f0 curve. Audio playback widget.
-3. Show the model architecture (markdown diagram + summary).
-4. Train (GPU). Display loss curve live or after.
-5. Save checkpoint to `models/ddsp_baseline_<instrument>.pt`. Save 5-10 representative
-   audio samples (input + reconstruction) to `samples/baseline/`.
-6. Final cell: side-by-side audio comparison widget (original vs. reconstruction) for
-   several test samples — this is what students hear in class.
+## Model spec (keep it minimal and conventional)
+- Encoder: extract per-frame loudness (A-weighted, log-scale) and f0 (use torchcrepe or precomputed CREPE). No learned encoder of timbre is required for this baseline — DDSP autoencoder style with hand-crafted features is the canonical minimal version. If you do include a small Z encoder, keep it optional and off by default.
+- Decoder: small MLP/GRU stack mapping (loudness, f0) → harmonic amplitudes (per-harmonic), overall amplitude, and noise-band magnitudes. Follow the original DDSP paper's modified-sigmoid output activation for non-negative controls.
+- Synthesis:
+  - Harmonic oscillator: additive sinusoidal synthesis with anti-aliasing (zero out harmonics above Nyquist).
+  - Filtered noise: time-varying FIR filter applied to white noise via frequency-domain magnitude response (windowed IR), as in the DDSP paper.
+  - Sum harmonic + noise. No reverb module needed for the baseline (keeps it minimal; out-of-scope additions are fine if trivial).
+- Loss: multi-scale spectral (magnitude STFT at several FFT sizes, L1 + log-L1).
+- Sample rate: 16 kHz is sufficient and keeps things fast. Frame rate: 250 Hz (hop 64 at 16 kHz) is standard.
 
-DELIVERABLES:
-- Modules in `src/ddsp/`
-- `notebooks/00_baseline_ddsp.ipynb`, fully executed with outputs
-- Trained checkpoint in `models/`
-- Demo samples in `samples/baseline/`
-- Training log in `training/`
+## Training
+- Train on GPU. Keep it short — a few thousand steps is enough for didactic results on one instrument. Save the best checkpoint to `models/ddsp_baseline_<instrument>.pt`.
+- Log losses and a few audio reconstructions to `training/`.
 
-Keep the model small enough to train in <30 min on a single modern GPU. The point is
-didactic clarity, not SOTA quality.
+## The notebook (`notebooks/01_ddsp_baseline.ipynb`)
+This is a TEACHING notebook. It should be interactive and explanatory.
+- Markdown intro: what DDSP is, why it's a great substrate for active divergence (interpretable controls + differentiable synthesis chain).
+- Show the dataset choice and play a few samples (use `IPython.display.Audio`).
+- Show feature extraction: plot loudness and f0 contours.
+- Walk through the model architecture with code cells importing from `src/`. The notebook should not redefine the model — only import, instantiate, and demonstrate.
+- A cell that loads the trained checkpoint (CPU) and reconstructs a held-out sample. Plot original vs. reconstructed spectrograms side by side and play both.
+- An interactive cell using `ipywidgets`: sliders for a constant pitch (MIDI) and a constant loudness, plus a duration; render and play the result. This previews the parameter-control surface that notebook 2 will exploit.
+- Final cell: a brief "what's next" pointing to inference-time active divergence.
+
+## Rules
+- Be fully autonomous. Do not ask questions. Make sensible decisions and document them in the notebook.
+- Run until done. If a step fails, debug and continue.
+- Code in `src/` should be minimal but fully functional and importable.
+- Verify the notebook runs end-to-end on CPU after training (restart kernel, run all). Fix anything that breaks.
+- Read the DDSP paper in `papers/` before implementing — match its conventions.

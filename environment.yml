@@ -1,0 +1,24 @@
+name: active-divergence
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pytorch
+  - torchvision
+  - torchaudio
+  - pytorch-cuda=12.1
+  - numpy
+  - scipy
+  - matplotlib
+  - librosa
+  - tqdm
+  - jupyter
+  - ipywidgets
+  - tensorboard
+  - pip
+  - pip:
+    - soundfile
+    - torchcrepe

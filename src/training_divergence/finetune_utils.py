@@ -32,6 +32,51 @@ HOP_LENGTH = 64
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Probe from real audio
+# ─────────────────────────────────────────────────────────────────────────────
+
+def make_probe_from_clip(
+    processed_dir: str,
+    clip_idx: int = 0,
+    max_frames: Optional[int] = None,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """
+    Load a pre-processed violin clip and return real (f0, loudness, reference_audio).
+
+    Use this as the probe instead of constant values: the baseline sounds like a
+    recognisable (if imperfect) violin phrase, so model drift is immediately audible.
+
+    Returns:
+        f0_probe:      (1, N_frames) — real f0 trajectory from the clip
+        loud_probe:    (1, N_frames) — real A-weighted loudness trajectory
+        ref_audio:     (T,) — original violin audio (for visual comparison)
+    """
+    files = sorted([f for f in os.listdir(processed_dir) if f.endswith(".pt")])
+    path = os.path.join(processed_dir, files[clip_idx % len(files)])
+    data = torch.load(path, weights_only=True)
+
+    f0   = data["f0_hz"]       # (N,)
+    loud = data["loudness"]    # (N,)
+    audio = data["audio"]      # (T,)
+
+    # Replace zero / near-zero f0 frames (unvoiced) with the mean voiced f0
+    voiced_mask = f0 > 50.0
+    if voiced_mask.any():
+        mean_f0 = f0[voiced_mask].mean()
+        f0 = torch.where(voiced_mask, f0, mean_f0)
+    else:
+        f0 = f0.clamp(min=100.0)
+
+    if max_frames is not None:
+        f0   = f0[:max_frames]
+        loud = loud[:max_frames]
+        T    = max_frames * HOP_LENGTH
+        audio = audio[:T]
+
+    return f0.unsqueeze(0), loud.unsqueeze(0), audio
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Data loading
 # ─────────────────────────────────────────────────────────────────────────────
 

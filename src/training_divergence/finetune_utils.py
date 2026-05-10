@@ -216,16 +216,20 @@ def finetune_step(
     loss_fn: torch.nn.Module,
     batch: dict,
     device: str = "cpu",
+    output_key: str = "audio",
 ) -> float:
     """
     Execute one gradient step of fine-tuning.
 
     Args:
-        model:     DDSPAutoencoder (weights unfrozen)
-        optimizer: e.g. Adam
-        loss_fn:   MultiScaleSpectralLoss instance
-        batch:     dict with keys 'audio', 'f0_hz', 'loudness' — all (B, *) tensors
-        device:    'cpu' or 'cuda'
+        model:      DDSPAutoencoder or DDSPFMModel (weights unfrozen)
+        optimizer:  e.g. Adam
+        loss_fn:    MultiScaleSpectralLoss instance
+        batch:      dict with keys 'audio', 'f0_hz', 'loudness' — all (B, *) tensors
+        device:     'cpu' or 'cuda'
+        output_key: key in model output dict to compare against target audio.
+                    Use 'fm_audio' to compute loss on the FM-only signal (no noise),
+                    preventing the noise branch from compensating for FM changes.
 
     Returns:
         scalar loss value
@@ -236,7 +240,7 @@ def finetune_step(
     loudness = batch["loudness"].to(device)  # (B, N)
 
     out = model(f0, loudness)
-    loss = loss_fn(out["audio"], audio)
+    loss = loss_fn(out[output_key], audio)
 
     optimizer.zero_grad()
     loss.backward()

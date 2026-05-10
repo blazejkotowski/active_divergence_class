@@ -1,4 +1,4 @@
-from .inspiring_set import AnimalSynth, fit_synth_to_target, load_esc50_animals
+from .inspiring_set import VoiceSynth, fit_synth_to_target, load_esc50_animals
 from .finetune_utils import (
     load_audio_chunks,
     extract_features_from_audio,

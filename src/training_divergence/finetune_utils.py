@@ -36,28 +36,37 @@ HOP_LENGTH = 64
 # ─────────────────────────────────────────────────────────────────────────────
 
 def make_probe_from_clip(
-    processed_dir: str,
+    data_dir: str,
     clip_idx: int = 0,
     max_frames: Optional[int] = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
-    Load a pre-processed violin clip and return real (f0, loudness, reference_audio).
+    Load a violin clip and return real (f0, loudness, reference_audio).
 
-    Use this as the probe instead of constant values: the baseline sounds like a
-    recognisable (if imperfect) violin phrase, so model drift is immediately audible.
+    Supports both the WAV+features format (samples/violin/) and the legacy
+    .pt format (samples/processed/).  WAV clips are tried first.
 
     Returns:
         f0_probe:      (1, N_frames) — real f0 trajectory from the clip
         loud_probe:    (1, N_frames) — real A-weighted loudness trajectory
         ref_audio:     (T,) — original violin audio (for visual comparison)
     """
-    files = sorted([f for f in os.listdir(processed_dir) if f.endswith(".pt")])
-    path = os.path.join(processed_dir, files[clip_idx % len(files)])
-    data = torch.load(path, weights_only=True)
+    wav_files = sorted([f for f in os.listdir(data_dir) if f.endswith(".wav")])
+    pt_files  = sorted([f for f in os.listdir(data_dir)
+                        if f.endswith(".pt") and not f.endswith("_features.pt")])
 
-    f0   = data["f0_hz"]       # (N,)
-    loud = data["loudness"]    # (N,)
-    audio = data["audio"]      # (T,)
+    if wav_files:
+        wav_name = wav_files[clip_idx % len(wav_files)]
+        wav_path  = os.path.join(data_dir, wav_name)
+        feat_path = os.path.join(data_dir, wav_name.replace(".wav", "_features.pt"))
+        audio, _ = torchaudio.load(wav_path)
+        audio = audio.squeeze(0)
+        feats = torch.load(feat_path, weights_only=True)
+        f0, loud = feats["f0_hz"], feats["loudness"]
+    else:
+        path = os.path.join(data_dir, pt_files[clip_idx % len(pt_files)])
+        data = torch.load(path, weights_only=True)
+        f0, loud, audio = data["f0_hz"], data["loudness"], data["audio"]
 
     # Replace zero / near-zero f0 frames (unvoiced) with the mean voiced f0
     voiced_mask = f0 > 50.0

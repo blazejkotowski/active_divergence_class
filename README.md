@@ -23,6 +23,21 @@ This project treats active divergence as a spectrum of four interception strateg
 
 ---
 
+## Getting started
+
+The archive `active-divergence-materials.tar.gz` contains all models and audio samples.
+Unpack it into the root of a cloned copy of this repository:
+
+```bash
+tar -xzf active-divergence-materials.tar.gz
+```
+
+This populates `models/`, `samples/violin/`, `samples/trumpet/`, and `samples/esc50/`
+in place. All notebooks and source code are already in the repository; the archive
+supplies only the binary assets.
+
+---
+
 ## Repository layout
 
 ```
@@ -35,23 +50,21 @@ src/
   network_bending/         Activation and weight manipulation for PLAUD
 
 notebooks/
-  01_ddsp_baseline.ipynb          Baseline DDSP violin model
   02_inference_divergence.ipynb   Inference-time active divergence
   03_training_divergence.ipynb    Training-time divergence
   04_network_bending_plaud.ipynb  Network bending and model blending on PLAUD
 
 models/
-  ddsp_baseline_violin.pt         Trained DDSP checkpoint (best val_loss)
-  ddsp_divergent_violin_*.pt      Divergent fine-tuning checkpoints
-  ddsp_inharmonic_*.pt            Inharmonicity-loss checkpoints
+  ddsp_baseline_violin.pt         Trained DDSP checkpoint
+  fm_violin.pt                    Trained FM-DDSP checkpoint
   ts/                             PLAUD TorchScript models
 
 samples/
-  processed/                      Pre-extracted URMP violin clips (.pt)
-  *.wav                           Raw 16 kHz copies
+  violin/                         16 kHz URMP violin clips (.wav + _features.pt)
+  trumpet/                        16 kHz URMP trumpet clips (.wav + _features.pt)
 
-papers/                           Reference papers and bending log
-training/                         TensorBoard logs
+tmp/                              Divergent checkpoints written here during training
+docs/                             Per-module documentation
 ```
 
 ---
@@ -83,7 +96,14 @@ conda run -n active-divergence jupyter nbconvert \
 
 ## Data
 
-The DDSP model trains on four URMP violin stems (movements 9, 17, 26, 44). Raw stems are expected at `/mnt/mariadata/datasets/URMP/Dataset`. Pre-processed clips are stored in `samples/processed/` after running `python -m src.ddsp.preprocess`. The inspiring-set experiments use ESC-50 animal vocalization clips.
+Audio samples are included in the archive under `samples/violin/` (16 clips) and
+`samples/trumpet/` (15 clips). Each clip is a 4-second 16 kHz WAV file with a companion
+`_features.pt` containing the pre-extracted F0 and loudness features used by the
+notebooks.
+
+The inspiring-set section (§3.1 of notebook 03) requires ESC-50 animal vocalization
+clips. Download the dataset from https://github.com/karolpiczak/ESC-50 and set the
+`ESC50_DIR` path in the notebook setup cell.
 
 ---
 

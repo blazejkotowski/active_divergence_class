@@ -2,10 +2,6 @@
 
 A research toolkit for applying active divergence techniques to neural audio synthesis. The project spans the full pipeline from training a DDSP instrument model from raw audio, through inference-time and training-time manipulation of that model, to activation-level and weight-level bending of pre-trained black-box TorchScript synthesizers.
 
-The work accompanies the paper:
-
-> Kotowski, B. & Font, F. (2026). *Network Bending as Circuit Bending Inspired Live Neural Synthesis Hacking*. NIME.
-
 ---
 
 ## What is active divergence?

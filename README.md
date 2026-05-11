@@ -56,8 +56,10 @@ models/
   ts/                             PLAUD TorchScript models
 
 samples/
-  violin/                         16 kHz URMP violin clips (.wav + _features.pt)
-  trumpet/                        16 kHz URMP trumpet clips (.wav + _features.pt)
+  stems/                          Full-length 16 kHz URMP violin stems (4 pieces)
+  violin/                         Pre-clipped 4s violin clips (.wav + _features.pt)
+  trumpet/                        Pre-clipped 4s trumpet clips (.wav + _features.pt)
+  esc50/                          20 ESC-50 animal clips with filtered metadata
 
 tmp/                              Divergent checkpoints written here during training
 docs/                             Per-module documentation
@@ -92,14 +94,14 @@ conda run -n active-divergence jupyter nbconvert \
 
 ## Data
 
-Audio samples are included in the archive under `samples/violin/` (16 clips) and
-`samples/trumpet/` (15 clips). Each clip is a 4-second 16 kHz WAV file with a companion
-`_features.pt` containing the pre-extracted F0 and loudness features used by the
-notebooks.
+All audio samples are included in the archive:
 
-The inspiring-set section (§3.1 of notebook 03) requires ESC-50 animal vocalization
-clips. Download the dataset from https://github.com/karolpiczak/ESC-50 and set the
-`ESC50_DIR` path in the notebook setup cell.
+| Path | Contents | Used by |
+|------|----------|---------|
+| `samples/stems/` | Four full-length 16 kHz URMP violin stems | Notebook 01 |
+| `samples/violin/` | 16 pre-clipped 4s violin clips (.wav + _features.pt) | Notebooks 02, 03 |
+| `samples/trumpet/` | 15 pre-clipped 4s trumpet clips (.wav + _features.pt) | Notebook 03 |
+| `samples/esc50/` | 20 ESC-50 animal clips — 5 per category (cat, frog, chirping_birds, crickets) | Notebook 03 |
 
 ---
 
